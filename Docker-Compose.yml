@@ -1,6 +1,6 @@
-## Para execução local!
+## Docker compose serve apenas para execução local!
 
-version: '3'
+name: Arpeggio
 
 services:
   selenium:
@@ -41,6 +41,9 @@ services:
 
   arpeggio:
     container_name: API
+    build:
+      context: .
+      dockerfile: Dockerfile
     image: arpeggio-api
     networks:
       - selenium-network
@@ -52,6 +55,7 @@ services:
     env_file:
       - .env
     environment:
+      SPRING_PROFILES_ACTIVE: dev
       WEBDRIVER_HOST: selenium
       WEBDRIVER_PORT: 4444
       JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,address=*:5005,server=y,suspend=n
