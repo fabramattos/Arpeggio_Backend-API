@@ -3,11 +3,17 @@ package br.com.arpeggio.api.service
 import br.com.arpeggio.api.dto.externalApi.spotify.SpotifyApiAutheticationResponse
 import br.com.arpeggio.api.infra.exception.FalhaNaAutenticacaoException
 import br.com.arpeggio.api.infra.log.Logs
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.awaitBodyOrNull
+import kotlin.time.Duration.Companion.milliseconds
 
 @Component
 class SpotifyAuthentication(
@@ -16,18 +22,26 @@ class SpotifyAuthentication(
 
     @Value("\${secrets.spotify_api.secret}")
     private val SPOTIFY_API_SECRET: String,
+    private val webClient: WebClient,
     private var header: String? = null,
     private var token: String? = null,
 ) {
 
     val headerValue get() = header
 
-    suspend fun atualizaToken(webClient: WebClient, attempt: Int = 1, maxAttempts: Int = 3) {
+    @Scheduled(fixedRate = 3600000L)
+    fun agendarAtualizacaoToken() {
+        CoroutineScope(Dispatchers.Default).launch {
+            atualizaToken()
+        }
+    }
+
+    suspend fun atualizaToken(attempt: Int = 1, maxAttempts: Int = 3) {
         if(attempt >= maxAttempts)
             throw FalhaNaAutenticacaoException()
 
         val chamadaApi = runCatching {
-            token = autentica(webClient).access_token
+            token = autentica().access_token
             header = "Bearer $token"
         }
 
@@ -38,12 +52,12 @@ class SpotifyAuthentication(
 
         chamadaApi.onFailure {
             Logs.error("Spotify", 0, it.localizedMessage)
-            Thread.sleep(1000)
-            atualizaToken(webClient, attempt + 1)
+            delay(1000.milliseconds)
+            atualizaToken(attempt + 1)
         }
     }
 
-    private suspend fun autentica(webClient: WebClient): SpotifyApiAutheticationResponse {
+    private suspend fun autentica(): SpotifyApiAutheticationResponse {
         return webClient.post()
             .uri("https://accounts.spotify.com/api/token")
             .contentType(MediaType.APPLICATION_FORM_URLENCODED)

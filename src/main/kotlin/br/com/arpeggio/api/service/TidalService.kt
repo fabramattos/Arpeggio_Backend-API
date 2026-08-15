@@ -28,7 +28,7 @@ class TidalService(
     override val NOME_STREAMING: String = "Tidal",
     private val authentication: TidalAuthentication,
     private val webClient: WebClient,
-) : CommandStreamingAudio {
+) : CommandStreamingMusic, CommandStreamingPodcast {
 
 //    @Scheduled(fixedRate = VALIDADE_TOKEN)
 //    fun atualizaToken() {

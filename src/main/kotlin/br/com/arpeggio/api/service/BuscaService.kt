@@ -12,18 +12,25 @@ import br.com.arpeggio.api.infra.log.Logs
 import br.com.arpeggio.api.utilitario.tratarBusca
 import kotlinx.coroutines.coroutineScope
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import org.springframework.stereotype.Service
 
 @Service
 class BuscaService(
-    val spotifyService: SpotifyService,
-    val deezerService: DeezerService,
+    val spotifyMusicService: SpotifyMusicService,
+    val spotifyPodcastService: SpotifyPodcastService,
+    val deezerMusicService: DeezerMusicService,
+    val deezerPodcastService: DeezerPodcastService,
     val youtubeMusicService: YoutubeMusicService,
     val tidalService: TidalService,
-    val commandStreamingAudio: List<CommandStreamingAudio> = listOf(
-        spotifyService,
-        deezerService,
+    val commandStreamingMusic: List<CommandStreamingMusic> = listOf(
+        spotifyMusicService,
+        deezerMusicService,
+        youtubeMusicService,
+        tidalService,
+    ),
+    val commandStreamingPodcast: List<CommandStreamingPodcast> = listOf(
+        spotifyPodcastService,
+        deezerPodcastService,
         youtubeMusicService,
         tidalService,
     ),
@@ -39,9 +46,9 @@ class BuscaService(
         val requestParams = RequestParams(nomeBusca, regiao, tipos)
 
         val listaResultados = mutableListOf<ItemResponse>()
-        runBlocking {
+        coroutineScope {
             Logs.searchStarted(requestParams)
-            commandStreamingAudio.forEach { streaming ->
+            commandStreamingMusic.forEach { streaming ->
                 launch {
                     val resultado = streaming.buscaPorArtista(requestParams)
                     listaResultados.add(resultado)
@@ -84,8 +91,8 @@ class BuscaService(
 
         Logs.searchStarted(requestParams)
 
-        var listaResultados = mutableListOf<ItemResponse>()
-        commandStreamingAudio.forEach { streaming ->
+        val listaResultados = mutableListOf<ItemResponse>()
+        commandStreamingPodcast.forEach { streaming ->
             launch {
                 val resultado = streaming.buscaPorPodcast(requestParams)
                 listaResultados.add(resultado)

@@ -43,7 +43,7 @@ class YoutubeMusicService(
     private val WEBDRIVER_PORT: String,
 
     private var driver: WebDriver?,
-) : CommandStreamingAudio {
+) : CommandStreamingMusic, CommandStreamingPodcast {
 
     @PostConstruct
     fun logaUrlDoChrome() {
