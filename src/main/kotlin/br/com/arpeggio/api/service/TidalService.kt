@@ -101,7 +101,7 @@ class TidalService(
                     .retrieve()
                     .awaitBody<String>()
             } catch (ex: Exception) {
-                Logs.error(NOME_STREAMING, requestParams.id, ex.localizedMessage)
+                Logs.error(NOME_STREAMING, requestParams.id, ex.localizedMessage, ex)
                 authentication.atualizaToken(webClient)
             }
         }
@@ -179,7 +179,7 @@ class TidalService(
                     .awaitBody<String>()
             } catch (ex: Exception) {
                 error = ex
-                Logs.error(NOME_STREAMING, request.id, ex.localizedMessage)
+                Logs.error(NOME_STREAMING, request.id, ex.localizedMessage, ex)
             }
         }
         throw RuntimeException(error)

@@ -47,7 +47,7 @@ class SpotifyPodcastService(
                     Logs.authenticationWarn(NOME_STREAMING)
                     authentication.atualizaToken()
                 } else {
-                    Logs.error(NOME_STREAMING, requestParams.id, ex.localizedMessage ?: "Erro na busca")
+                    Logs.error(NOME_STREAMING, requestParams.id, ex.localizedMessage ?: "Erro na busca", ex)
                     delay(500.milliseconds)
                 }
             }

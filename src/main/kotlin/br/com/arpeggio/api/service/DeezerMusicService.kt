@@ -42,7 +42,7 @@ class DeezerMusicService(
                     .first()
 
             } catch (ex: Exception) {
-                Logs.warn(NOME_STREAMING, request.id, ex.localizedMessage ?: "Erro na busca de artista")
+                Logs.warn(NOME_STREAMING, request.id, ex.localizedMessage ?: "Erro na busca de artista", ex)
                 delay(500.milliseconds)
             }
         }
@@ -70,7 +70,7 @@ class DeezerMusicService(
                     }
 
             } catch (ex: Exception) {
-                Logs.error(NOME_STREAMING, requestParams.id, ex.localizedMessage ?: "Erro na busca de albuns")
+                Logs.error(NOME_STREAMING, requestParams.id, ex.localizedMessage ?: "Erro na busca de albuns", ex)
                 delay(500.milliseconds)
             }
         }

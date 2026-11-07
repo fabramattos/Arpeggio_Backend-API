@@ -41,7 +41,7 @@ class DeezerPodcastService(
                     .first()
 
             } catch (ex: Exception) {
-                Logs.warn(NOME_STREAMING, requestParams.id, ex.localizedMessage ?: "Erro na busca de podcasts")
+                Logs.warn(NOME_STREAMING, requestParams.id, ex.localizedMessage ?: "Erro na busca de podcasts", ex)
                 delay(500.milliseconds)
             }
         }
@@ -64,7 +64,7 @@ class DeezerPodcastService(
                     .awaitBody<DeezerApiAlbumsResponse>()
                     .total
             } catch (ex: Exception) {
-                Logs.error(NOME_STREAMING, requestParam.id, ex.localizedMessage ?: "Erro na busca de episodios do podcast")
+                Logs.error(NOME_STREAMING, requestParam.id, ex.localizedMessage ?: "Erro na busca de episodios do podcast", ex)
                 delay(500.milliseconds)
             }
         }
