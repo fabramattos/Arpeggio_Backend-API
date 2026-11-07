@@ -1,4 +1,4 @@
-package br.com.arpeggio.api.dto.externalApi.youtube
+package br.com.arpeggio.api.client.dto.youtube
 
 data class YoutubeResult(
     val id: String,

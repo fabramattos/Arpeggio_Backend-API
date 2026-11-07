@@ -1,15 +1,17 @@
-package br.com.arpeggio.api.service
+package br.com.arpeggio.api.client.api
 
 import br.com.arpeggio.api.infra.exception.FalhaNaAutenticacaoException
 import br.com.arpeggio.api.infra.log.Logs
 import br.com.arpeggio.api.infra.security.AuthEncoders
 import com.fasterxml.jackson.databind.ObjectMapper
+import kotlinx.coroutines.delay
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.BodyInserters
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.awaitBodyOrNull
+import kotlin.time.Duration.Companion.milliseconds
 
 @Component
 class TidalAuthentication(
@@ -25,7 +27,7 @@ class TidalAuthentication(
     val headerValue get() = header
 
     suspend fun atualizaToken(webClient: WebClient, attempt: Int = 1, maxAttempts: Int = 3) {
-        if(attempt >= maxAttempts)
+        if (attempt >= maxAttempts)
             throw FalhaNaAutenticacaoException()
 
         val chamadaApi = runCatching {
@@ -40,7 +42,7 @@ class TidalAuthentication(
 
         chamadaApi.onFailure {
             Logs.error("Tidal", 0, it.localizedMessage)
-            Thread.sleep(500)
+            delay(500.milliseconds)
             atualizaToken(webClient, attempt + 1)
         }
     }

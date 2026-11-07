@@ -1,15 +1,15 @@
-package br.com.arpeggio.api.service
+package br.com.arpeggio.api.client.api
 
-import br.com.arpeggio.api.dto.externalApi.spotify.SpotifyApiAutheticationResponse
+import br.com.arpeggio.api.client.dto.spotify.SpotifyApiAutheticationResponse
 import br.com.arpeggio.api.infra.exception.FalhaNaAutenticacaoException
 import br.com.arpeggio.api.infra.log.Logs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.MediaType
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Component
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.awaitBodyOrNull
@@ -37,7 +37,7 @@ class SpotifyAuthentication(
     }
 
     suspend fun atualizaToken(attempt: Int = 1, maxAttempts: Int = 3) {
-        if(attempt >= maxAttempts)
+        if (attempt >= maxAttempts)
             throw FalhaNaAutenticacaoException()
 
         val chamadaApi = runCatching {
@@ -67,4 +67,3 @@ class SpotifyAuthentication(
             ?: throw FalhaNaAutenticacaoException()
     }
 }
-

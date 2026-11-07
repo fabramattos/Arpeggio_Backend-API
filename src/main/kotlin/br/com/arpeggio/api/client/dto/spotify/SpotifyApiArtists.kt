@@ -1,4 +1,4 @@
-package br.com.arpeggio.api.dto.externalApi.spotify
+package br.com.arpeggio.api.client.dto.spotify
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 

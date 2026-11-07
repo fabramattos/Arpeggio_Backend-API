@@ -1,4 +1,4 @@
-package br.com.arpeggio.api.dto.externalApi.deezer
+package br.com.arpeggio.api.client.dto.deezer
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 

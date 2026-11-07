@@ -1,4 +1,4 @@
-package br.com.arpeggio.api.dto.externalApi.tidal
+package br.com.arpeggio.api.client.dto.tidal
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 

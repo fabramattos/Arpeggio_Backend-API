@@ -1,10 +1,9 @@
-package br.com.arpeggio.api.dto.externalApi.spotify
+package br.com.arpeggio.api.client.dto.spotify
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties
 
 @JsonIgnoreProperties(ignoreUnknown = true)
-data class SpotifyApiArtistData(
+data class SpotifyApiPodcastData(
     val name: String,
-    val id: String,
-    val uri: String,
+    val total_episodes: Int
 )

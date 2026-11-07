@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "br.com.arpeggio.api"
-version = "0.1.01"
+version = "0.2.01"
 
 springBoot {
     buildInfo()

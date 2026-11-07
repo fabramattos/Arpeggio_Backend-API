@@ -1,6 +1,7 @@
 package br.com.arpeggio.api.service
 
-import br.com.arpeggio.api.dto.externalApi.tidal.TidalResult
+import br.com.arpeggio.api.client.api.TidalClient
+import br.com.arpeggio.api.client.dto.tidal.TidalResult
 import br.com.arpeggio.api.dto.request.RequestParams
 import br.com.arpeggio.api.dto.request.RequestTipo
 import br.com.arpeggio.api.dto.response.ItemResponse
@@ -17,9 +18,6 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
-import org.springframework.web.reactive.function.client.WebClient
-import org.springframework.web.reactive.function.client.awaitBody
-import org.springframework.web.util.UriComponentsBuilder
 import java.net.URI
 
 private const val DELAY_REQUEST = 300L
@@ -27,35 +25,32 @@ private const val DELAY_RETRY = 1000L
 private const val MAX_PAGINAS = 30
 private const val VALIDADE_TOKEN = 86400 * 1000L
 
-
 @Service
 class TidalService(
     override val NOME_STREAMING: String = "Tidal",
-    private val authentication: TidalAuthentication,
-    private val webClient: WebClient,
+    private val tidalClient: TidalClient,
 ) : CommandStreamingMusic, CommandStreamingPodcast {
 
     @Scheduled(fixedRate = VALIDADE_TOKEN)
-    fun atualizaToken() {
-        CoroutineScope(Dispatchers.Default)
-            .launch {
-                authentication.atualizaToken(webClient)
-            }
+    fun agendarAtualizacaoToken() {
+        CoroutineScope(Dispatchers.Default).launch {
+            tidalClient.atualizaToken()
+        }
     }
 
     override suspend fun buscaPorArtista(requestParams: RequestParams): ItemResponse {
         Logs.info("ENTRY: TidalService/buscaPorArtista", requestParams.id)
-        try {
+        return try {
             val artista = buscaArtista(requestParams)
                 .apply { qty = buscaAlbunsDoArtista(requestParams, id) }
 
-            return ItemResponse(
+            ItemResponse(
                 streaming = NOME_STREAMING,
                 consulta = artista.name,
                 albuns = artista.qty
             )
         } catch (ex: Exception) {
-            return ItemResponse(
+            ItemResponse(
                 streaming = NOME_STREAMING,
                 consulta = requestParams.busca,
                 erro = ex.message
@@ -72,10 +67,12 @@ class TidalService(
     }
 
     private suspend fun buscaArtista(requestParams: RequestParams): TidalResult {
-        val uri = uriBuscaArtistas(requestParams)
-        val response = chamadaApiTidal_BuscaArtistas(requestParams, uri)
-
         return try {
+            val response = tidalClient.buscaArtistas(
+                termo = requestParams.busca,
+                regiao = requestParams.regiao.name,
+                idRequisicao = requestParams.id,
+            )
             val rootNode = ObjectMapper().readTree(response)
             extrairArtistaDoJson(rootNode, requestParams.busca)
         } catch (ex: Exception) {
@@ -108,49 +105,24 @@ class TidalService(
         return TidalResult(primeiroArtistaId, artistaNome, 0)
     }
 
-    private suspend fun chamadaApiTidal_BuscaArtistas(requestParams: RequestParams, uri: URI): String {
-        repeat(2) {
-            try {
-                Logs.info("ENTRY: TidalService/chamadaApiTidal_BuscaArtistas", requestParams.id)
-                return webClient
-                    .get()
-                    .uri { uri }
-                    .header("accept", "application/vnd.api+json")
-                    .header("Authorization", authentication.headerValue)
-                    .retrieve()
-                    .awaitBody<String>()
-            } catch (ex: Exception) {
-                Logs.error(NOME_STREAMING, requestParams.id, ex.localizedMessage, ex)
-                authentication.atualizaToken(webClient)
-            }
-        }
-        throw FalhaAoBuscarArtistasException()
-    }
-
-
-    private fun uriBuscaArtistas(requestParams: RequestParams): URI =
-        UriComponentsBuilder
-            .fromUriString("https://openapi.tidal.com/v2/searchResults")
-            .queryParam("countryCode", requestParams.regiao.name)
-            .queryParam("filter[query]", "{query}")
-            .queryParam("include", "artists")
-            .buildAndExpand(requestParams.busca)
-            .encode()
-            .toUri()
-
-
     private suspend fun buscaAlbunsDoArtista(requestParams: RequestParams, idArtista: String): Int {
         var errosReq = 0
         val lancamentosAcumulados = mutableListOf<LancamentoTidal>()
         var paginaAtual = 0
-        var proximaUri: URI? = uriAlbunsDoArtista(requestParams, idArtista)
+        var proximaUri: URI? = null
+        var primeiraPagina = true
 
-        while (proximaUri != null && paginaAtual < MAX_PAGINAS && errosReq <= 3) {
+        while ((primeiraPagina || proximaUri != null) && paginaAtual < MAX_PAGINAS && errosReq <= 3) {
             val uriAtual = proximaUri
             val resultado = runCatching {
-                val response = chamadaApiTidal_AlbunsDoArtista(requestParams, uriAtual)
-                val rootNode = ObjectMapper().readTree(response)
+                val response = if (primeiraPagina) {
+                    tidalClient.buscaAlbunsDoArtista(idArtista, requestParams.regiao.name, requestParams.id)
+                } else {
+                    tidalClient.buscaPorUri(uriAtual!!, requestParams.id)
+                }
+                primeiraPagina = false
 
+                val rootNode = ObjectMapper().readTree(response)
                 val lancamentosDaPagina = extrairLancamentosDaPagina(rootNode, requestParams)
                 lancamentosAcumulados.addAll(lancamentosDaPagina)
 
@@ -250,35 +222,6 @@ class TidalService(
         }
         return URI(urlComInclude)
     }
-
-    private suspend fun chamadaApiTidal_AlbunsDoArtista(request: RequestParams, uri: URI): String {
-        var error: Exception? = null
-        repeat(2) {
-            try {
-                Logs.info("ENTRY: TidalService/chamadaApiTidal_AlbunsDoArtista", request.id)
-                return webClient
-                    .get()
-                    .uri { uri }
-                    .header("accept", "application/vnd.api+json")
-                    .header("Authorization", authentication.headerValue)
-                    .retrieve()
-                    .awaitBody<String>()
-            } catch (ex: Exception) {
-                error = ex
-                Logs.error(NOME_STREAMING, request.id, ex.localizedMessage, ex)
-            }
-        }
-        throw RuntimeException(error)
-    }
-
-    private fun uriAlbunsDoArtista(requestParams: RequestParams, idArtista: String): URI =
-        UriComponentsBuilder
-            .fromUriString("https://openapi.tidal.com/v2/artists/{idArtista}")
-            .queryParam("countryCode", requestParams.regiao.name)
-            .queryParam("include", "albums")
-            .buildAndExpand(idArtista)
-            .encode()
-            .toUri()
 
     private fun verificaSePodeIgnorarRestricaoAutoral(requestParams: RequestParams): Boolean {
         return requestParams
