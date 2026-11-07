@@ -11,15 +11,20 @@ import br.com.arpeggio.api.infra.exception.FalhaInformacoesImprecisasDireitosAut
 import br.com.arpeggio.api.infra.log.Logs
 import com.fasterxml.jackson.databind.JsonNode
 import com.fasterxml.jackson.databind.ObjectMapper
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import org.springframework.web.reactive.function.client.WebClient
 import org.springframework.web.reactive.function.client.awaitBody
 import org.springframework.web.util.UriComponentsBuilder
 import java.net.URI
 
-private const val DELAY_REQUEST = 800L
+private const val DELAY_REQUEST = 300L
 private const val DELAY_RETRY = 1000L
-private const val LIMIT = 90
+private const val MAX_PAGINAS = 30
 private const val VALIDADE_TOKEN = 86400 * 1000L
 
 
@@ -30,13 +35,13 @@ class TidalService(
     private val webClient: WebClient,
 ) : CommandStreamingMusic, CommandStreamingPodcast {
 
-//    @Scheduled(fixedRate = VALIDADE_TOKEN)
-//    fun atualizaToken() {
-//        CoroutineScope(Dispatchers.Default)
-//            .launch {
-//                authentication.atualizaToken(webClient)
-//            }
-//    }
+    @Scheduled(fixedRate = VALIDADE_TOKEN)
+    fun atualizaToken() {
+        CoroutineScope(Dispatchers.Default)
+            .launch {
+                authentication.atualizaToken(webClient)
+            }
+    }
 
     override suspend fun buscaPorArtista(requestParams: RequestParams): ItemResponse {
         Logs.info("ENTRY: TidalService/buscaPorArtista", requestParams.id)
@@ -70,22 +75,37 @@ class TidalService(
         val uri = uriBuscaArtistas(requestParams)
         val response = chamadaApiTidal_BuscaArtistas(requestParams, uri)
 
-        try {
-            val artistaDados = ObjectMapper()
-                .readTree(response)
-                .path("artists") // array de artistas. Dentro, RESOURCES contem os dados de cada artista retornado
-                .first()
-                .path("resource")
-                ?: throw ArtistaNaoEncontradoException()
-
-            return TidalResult(
-                artistaDados.path("id").asText(),
-                artistaDados.path("name").asText(),
-                0
-            )
-        }catch (ex: Exception){
-            throw FalhaAoBuscarAlbunsDoArtista()
+        return try {
+            val rootNode = ObjectMapper().readTree(response)
+            extrairArtistaDoJson(rootNode, requestParams.busca)
+        } catch (ex: Exception) {
+            if (ex is ArtistaNaoEncontradoException) throw ex
+            throw FalhaAoBuscarArtistasException()
         }
+    }
+
+    private fun extrairArtistaDoJson(rootNode: JsonNode, buscaPadrao: String): TidalResult {
+        val primeiroArtistaId = rootNode
+            .path("data")
+            .firstOrNull()
+            ?.path("relationships")
+            ?.path("artists")
+            ?.path("data")
+            ?.firstOrNull()
+            ?.path("id")
+            ?.asText()
+            ?.takeIf { it.isNotBlank() }
+            ?: throw ArtistaNaoEncontradoException()
+
+        val artistaNome = rootNode
+            .path("included")
+            .firstOrNull { it.path("id").asText() == primeiroArtistaId }
+            ?.path("attributes")
+            ?.path("name")
+            ?.asText()
+            ?: buscaPadrao
+
+        return TidalResult(primeiroArtistaId, artistaNome, 0)
     }
 
     private suspend fun chamadaApiTidal_BuscaArtistas(requestParams: RequestParams, uri: URI): String {
@@ -95,9 +115,8 @@ class TidalService(
                 return webClient
                     .get()
                     .uri { uri }
-                    .header("accept", "application/vnd.tidal.v1+json")
+                    .header("accept", "application/vnd.api+json")
                     .header("Authorization", authentication.headerValue)
-                    .header("Content-Type", "application/vnd.tidal.v1+json")
                     .retrieve()
                     .awaitBody<String>()
             } catch (ex: Exception) {
@@ -109,59 +128,127 @@ class TidalService(
     }
 
 
-    private fun uriBuscaArtistas(requestParams: RequestParams) =
-        try{
-            UriComponentsBuilder
-                .fromUri(URI("https://openapi.tidal.com/v2/searchresults/${requestParams.busca}"))
-                .queryParam("type", "ARTISTS")
-                .queryParam("offset", 0)
-                .queryParam("limit", 3)
-                .queryParam("countryCode", requestParams.regiao.name)
-                .buildAndExpand()
-                .toUri()
-        } catch (ex: Exception){
-            throw RuntimeException("Erro na url da api Tidal")
-        }
+    private fun uriBuscaArtistas(requestParams: RequestParams): URI =
+        UriComponentsBuilder
+            .fromUriString("https://openapi.tidal.com/v2/searchResults")
+            .queryParam("countryCode", requestParams.regiao.name)
+            .queryParam("filter[query]", "{query}")
+            .queryParam("include", "artists")
+            .buildAndExpand(requestParams.busca)
+            .encode()
+            .toUri()
 
 
     private suspend fun buscaAlbunsDoArtista(requestParams: RequestParams, idArtista: String): Int {
         var errosReq = 0
-        var offset = 0
-        var totalAlbuns = 0
-        var maxAlbuns = Int.MAX_VALUE
-        while (offset < maxAlbuns && errosReq <= 3) {
+        val lancamentosAcumulados = mutableListOf<LancamentoTidal>()
+        var paginaAtual = 0
+        var proximaUri: URI? = uriAlbunsDoArtista(requestParams, idArtista)
+
+        while (proximaUri != null && paginaAtual < MAX_PAGINAS && errosReq <= 3) {
+            val uriAtual = proximaUri
             val resultado = runCatching {
+                val response = chamadaApiTidal_AlbunsDoArtista(requestParams, uriAtual)
+                val rootNode = ObjectMapper().readTree(response)
 
-                val uri = uriAlbunsDoArtista(requestParams, idArtista, offset)
-                val response = chamadaApiTidal_AlbunsDoArtista(requestParams, uri)
+                val lancamentosDaPagina = extrairLancamentosDaPagina(rootNode, requestParams)
+                lancamentosAcumulados.addAll(lancamentosDaPagina)
 
-                val albunsNode = ObjectMapper()
-                    .readTree(response)
-                    .path("data")
-
-                maxAlbuns = ObjectMapper()
-                    .readTree(response)
-                    .path("metadata")
-                    .path("total")
-                    .asInt()
-
-                totalAlbuns += contarAlbunsValidos(requestParams, albunsNode)
+                extrairProximaUri(rootNode)
             }
 
-            resultado.onSuccess {
-                offset += LIMIT
-                Thread.sleep(DELAY_REQUEST)
+            resultado.onSuccess { nextUri ->
+                proximaUri = nextUri
+                paginaAtual++
+                delay(DELAY_REQUEST)
             }
 
             resultado.onFailure {
-                if (it.localizedMessage.contains("Erro: 429")) { // erro de muitas requisições ao Tidal
+                if (it is FalhaInformacoesImprecisasDireitosAutoraisException) throw it
+                val is429 = it.localizedMessage?.contains("429") == true || it.cause?.localizedMessage?.contains("429") == true
+                if (is429) {
                     errosReq++
-                    Thread.sleep(DELAY_RETRY)
-                } else
+                    delay(DELAY_RETRY)
+                } else {
                     throw FalhaAoBuscarAlbunsDoArtista()
+                }
             }
         }
-        return totalAlbuns
+
+        val lancamentosSemDuplicatas = removerDuplicatas(lancamentosAcumulados)
+        return lancamentosSemDuplicatas.size
+    }
+
+    private fun removerDuplicatas(lancamentos: List<LancamentoTidal>): List<LancamentoTidal> {
+        return lancamentos.distinctBy { lancamento ->
+            gerarChaveDeduplicacao(lancamento)
+        }
+    }
+
+    private fun gerarChaveDeduplicacao(lancamento: LancamentoTidal): String {
+        if (lancamento.titulo.isBlank()) return lancamento.id
+        val tituloNormalizado = lancamento.titulo
+            .replace("’", "'")
+            .replace("…", "...")
+            .replace(Regex("\\s+"), " ")
+            .trim()
+            .lowercase()
+        return "${lancamento.tipo.uppercase()}_$tituloNormalizado"
+    }
+
+    private fun extrairLancamentosDaPagina(
+        rootNode: JsonNode,
+        requestParams: RequestParams,
+    ): List<LancamentoTidal> {
+        val albunsNode = rootNode.path("included")
+        return albunsNode.mapNotNull { albumNode ->
+            validarRestricaoAutoral(albumNode, requestParams)
+
+            val tipo = extrairTipoLancamento(albumNode)
+            val titulo = albumNode.path("attributes").path("title").asText()
+            val id = albumNode.path("id").asText()
+
+            if (ehTipoPermitido(tipo, requestParams)) {
+                LancamentoTidal(id, tipo, titulo)
+            } else {
+                null
+            }
+        }
+    }
+
+    private fun validarRestricaoAutoral(albumNode: JsonNode, requestParams: RequestParams) {
+        val status = albumNode.path("status").asInt()
+        if (status == 451 && !verificaSePodeIgnorarRestricaoAutoral(requestParams)) {
+            throw FalhaInformacoesImprecisasDireitosAutoraisException()
+        }
+    }
+
+    private fun extrairTipoLancamento(albumNode: JsonNode): String {
+        return albumNode.path("attributes").path("type").asText()
+            .ifBlank { albumNode.path("attributes").path("albumType").asText() }
+            .ifBlank { albumNode.path("resource").path("type").asText() }
+    }
+
+    private fun ehTipoPermitido(tipo: String, requestParams: RequestParams): Boolean {
+        return if (tipo.isBlank()) {
+            verificaSePodeIgnorarRestricaoAutoral(requestParams)
+        } else {
+            requestParams.tipos.any { it.name.equals(tipo, ignoreCase = true) }
+        }
+    }
+
+    private fun extrairProximaUri(rootNode: JsonNode): URI? {
+        val rawNext = rootNode.path("links").path("next").asText().takeIf { it.isNotBlank() }
+            ?: rootNode.path("data").path("relationships").path("albums").path("links").path("next").asText().takeIf { it.isNotBlank() }
+            ?: return null
+
+        val fullUrl = if (rawNext.startsWith("http")) rawNext else "https://openapi.tidal.com/v2$rawNext"
+        val urlComInclude = if (!fullUrl.contains("include=albums")) {
+            if (fullUrl.contains("?")) "$fullUrl&include=albums" else "$fullUrl?include=albums"
+        } else {
+            fullUrl
+        }
+        return URI(urlComInclude)
     }
 
     private suspend fun chamadaApiTidal_AlbunsDoArtista(request: RequestParams, uri: URI): String {
@@ -172,9 +259,8 @@ class TidalService(
                 return webClient
                     .get()
                     .uri { uri }
-                    .header("accept", "application/vnd.tidal.v1+json")
+                    .header("accept", "application/vnd.api+json")
                     .header("Authorization", authentication.headerValue)
-                    .header("Content-Type", "application/vnd.tidal.v1+json")
                     .retrieve()
                     .awaitBody<String>()
             } catch (ex: Exception) {
@@ -185,34 +271,23 @@ class TidalService(
         throw RuntimeException(error)
     }
 
-
-    private fun uriAlbunsDoArtista(requestParams: RequestParams, idArtista: String, offset: Int) =
+    private fun uriAlbunsDoArtista(requestParams: RequestParams, idArtista: String): URI =
         UriComponentsBuilder
-            .fromUri(URI("https://openapi.tidal.com/artists/${idArtista}/albums"))
+            .fromUriString("https://openapi.tidal.com/v2/artists/{idArtista}")
             .queryParam("countryCode", requestParams.regiao.name)
-            .queryParam("offset", offset)
-            .queryParam("limit", LIMIT)
-            .buildAndExpand()
+            .queryParam("include", "albums")
+            .buildAndExpand(idArtista)
+            .encode()
             .toUri()
-
-
-    private fun contarAlbunsValidos(requestParams: RequestParams, albunsNode: JsonNode): Int {
-        return albunsNode.count { album ->
-            if (verificaSePodeIgnorarRestricaoAutoral(requestParams)) {
-                true
-            } else {
-                val type = album.path("resource").path("type").asText()
-                val status = album.path("status").asInt()
-
-                if (status == 451) throw FalhaInformacoesImprecisasDireitosAutoraisException()
-
-                requestParams.tipos.any { tipo -> type.equals(tipo.name, true) }
-            }
-        }
-    }
 
     private fun verificaSePodeIgnorarRestricaoAutoral(requestParams: RequestParams): Boolean {
         return requestParams
             .tipos.containsAll(listOf(RequestTipo.ALBUM, RequestTipo.SINGLE))
     }
 }
+
+private data class LancamentoTidal(
+    val id: String,
+    val tipo: String,
+    val titulo: String,
+)
