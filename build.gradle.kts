@@ -3,9 +3,9 @@ import org.jetbrains.kotlin.gradle.tasks.KotlinCompile
 
 plugins {
     kotlin("jvm") version "2.1.10"
-    kotlin("plugin.spring") version "1.9.20"
-    id("org.springframework.boot") version "3.2.0"
-    id("io.spring.dependency-management") version "1.1.4"
+    kotlin("plugin.spring") version "2.1.10"
+    id("org.springframework.boot") version "3.3.9"
+    id("io.spring.dependency-management") version "1.1.7"
 }
 
 group = "br.com.arpeggio.api"
@@ -46,8 +46,8 @@ dependencies {
     implementation("org.seleniumhq.selenium:selenium-java:4.28.1")
 
     // swagger-ui
-    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.3.0")
-    implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:2.3.0")
+    implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
+    implementation("org.springdoc:springdoc-openapi-starter-webflux-ui:2.6.0")
 
 
     //automação para executar o docker-compose ao rodar springboot app no desenvolvimento

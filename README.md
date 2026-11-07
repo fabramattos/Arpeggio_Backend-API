@@ -15,13 +15,13 @@ Currently, we integrate with: Spotify, Deezer, Tidal, and YouTube Music.<br>
 ![Badge em Desenvolvimento](http://img.shields.io/static/v1?label=STATUS&message=DEVELOPMENT&color=GREEN&style=for-the-badge)
 
 ## 🚀 Stack 🚀
- - Kotlin 1.9
- - Kotlin Coroutines
- - Spring Boot (web, WebFlux)
- - Docker
- - Docker-Compose
+ - Java 21 (LTS)
+ - Kotlin 2.1
+ - Kotlin Coroutines 1.10
+ - Spring Boot 3.3 (Web, WebFlux)
+ - Docker & Docker Compose
  - Selenium Web Driver
- - OpenAPI
+ - OpenAPI / Swagger (SpringDoc 2.6)
 
 ## How to Use
 Currently, you can test the functionalities through the interactive Swagger-UI documentation [**at this link**](https://arpeggio-api-374326808505.southamerica-east1.run.app/doc/swagger-ui/index.html)
