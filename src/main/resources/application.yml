@@ -21,3 +21,23 @@ secrets:
 webdriver:
   host: ${WEBDRIVER_HOST:localhost}
   port: ${WEBDRIVER_PORT:4444}
+
+management:
+  endpoints:
+    web:
+      base-path: /
+      exposure:
+        include: "health,info"
+      path-mapping:
+        health: "health"
+        info: "info"
+  endpoint:
+    health:
+      show-details: always
+    info:
+      enabled: true
+  info:
+    build:
+      enabled: true
+    env:
+      enabled: true

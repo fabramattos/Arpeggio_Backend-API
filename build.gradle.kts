@@ -9,7 +9,11 @@ plugins {
 }
 
 group = "br.com.arpeggio.api"
-version = "1.1"
+version = "0.1.01"
+
+springBoot {
+    buildInfo()
+}
 
 kotlin{
     jvmToolchain(21)
@@ -24,6 +28,9 @@ repositories {
 }
 
 dependencies {
+
+    // Actuator / Healthcheck
+    implementation("org.springframework.boot:spring-boot-starter-actuator")
 
     // Web
     implementation("org.springframework.boot:spring-boot-starter-web")
