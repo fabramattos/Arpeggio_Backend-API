@@ -3,42 +3,6 @@
 name: Arpeggio
 
 services:
-  selenium:
-    container_name: edge-alone
-    image: selenium/standalone-edge:latest
-    shm_size: 2g
-    networks:
-      - selenium-network
-    ports:
-      - "4444:4444"
-      - "7900:7900"
-    env_file:
-      - .env
-
-#  selenium-hub:
-#    container_name: selenium-hub
-#    image: selenium/hub:4.16.1-20231219
-#    ports:
-#      - "4442:4442"
-#      - "4443:4443"
-#      - "4444:4444"
-#    networks:
-#      - selenium-network
-#
-#  chrome:
-#    container_name: Chrome
-#    image: selenium/node-chrome:4.16.1-20231219
-#    shm_size: 2gb
-#    depends_on:
-#      - selenium-hub
-#    environment:
-#      - SE_EVENT_BUS_HOST=selenium-hub
-#      - SE_EVENT_BUS_PUBLISH_PORT=4442
-#      - SE_EVENT_BUS_SUBSCRIBE_PORT=4443
-#      #- START_XVFB=false
-#    networks:
-#      - selenium-network
-
   arpeggio:
     container_name: API
     build:
@@ -46,22 +10,18 @@ services:
       dockerfile: Dockerfile
     image: arpeggio-api
     networks:
-      - selenium-network
+      - arpeggio-network
     ports:
       - "8080:8080"
       - "5005:5005" #depuração remota no container
-    depends_on:
-      - selenium
     env_file:
       - .env
     environment:
       SPRING_PROFILES_ACTIVE: dev
-      WEBDRIVER_HOST: selenium
-      WEBDRIVER_PORT: 4444
       JAVA_TOOL_OPTIONS: -agentlib:jdwp=transport=dt_socket,address=*:5005,server=y,suspend=n
 
     command: ["java", "-XX:+UseContainerSupport", "-jar", "app.jar"]
 
 networks:
-  selenium-network:
+  arpeggio-network:
     driver: bridge
