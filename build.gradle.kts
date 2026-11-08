@@ -9,7 +9,7 @@ plugins {
 }
 
 group = "br.com.arpeggio.api"
-version = "0.2.01"
+version = "1.0.00"
 
 springBoot {
     buildInfo()
@@ -49,8 +49,6 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.10.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor:1.10.1")
 
-    // selenium
-    implementation("org.seleniumhq.selenium:selenium-java:4.28.1")
 
     // swagger-ui
     implementation("org.springdoc:springdoc-openapi-starter-webmvc-ui:2.6.0")
