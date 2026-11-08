@@ -3,6 +3,7 @@ package br.com.arpeggio.api.client.api
 import br.com.arpeggio.api.client.dto.apple.AppleMusicSearchResponse
 import br.com.arpeggio.api.infra.exception.FalhaAoBuscarAlbunsDoArtista
 import br.com.arpeggio.api.infra.exception.FalhaAoBuscarArtistasException
+import br.com.arpeggio.api.infra.exception.FalhaAoBuscarPodcastsException
 import br.com.arpeggio.api.infra.log.Logs
 import com.fasterxml.jackson.databind.ObjectMapper
 import kotlinx.coroutines.delay
@@ -85,5 +86,38 @@ class AppleMusicClient(
             }
         }
         throw FalhaAoBuscarAlbunsDoArtista()
+    }
+
+    suspend fun buscaPodcasts(
+        termo: String,
+        regiao: String = "BR",
+        idRequisicao: Int = 0,
+    ): AppleMusicSearchResponse {
+        val uri = UriComponentsBuilder
+            .fromUri(URI("https://itunes.apple.com/search"))
+            .queryParam("term", termo)
+            .queryParam("entity", "podcast")
+            .queryParam("country", regiao)
+            .queryParam("limit", 1)
+            .buildAndExpand()
+            .encode()
+            .toUri()
+
+        repeat(2) {
+            try {
+                Logs.info("ENTRY: AppleMusicClient/buscaPodcasts", idRequisicao)
+                val responseJson = webClient
+                    .get()
+                    .uri { uri }
+                    .retrieve()
+                    .awaitBody<String>()
+
+                return objectMapper.readValue(responseJson, AppleMusicSearchResponse::class.java)
+            } catch (ex: Exception) {
+                Logs.warn(NOME_STREAMING, idRequisicao, ex.localizedMessage ?: "Erro na busca de podcast", ex)
+                delay(500.milliseconds)
+            }
+        }
+        throw FalhaAoBuscarPodcastsException()
     }
 }

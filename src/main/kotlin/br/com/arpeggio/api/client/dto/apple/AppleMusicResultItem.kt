@@ -11,6 +11,8 @@ data class AppleMusicResultItem(
     val collectionId: Long? = null,
     val collectionName: String? = null,
     val collectionType: String? = null,
+    val kind: String? = null,
+    val trackName: String? = null,
     val trackCount: Int? = null,
     val releaseDate: String? = null,
 )
