@@ -18,7 +18,7 @@ class YoutubeMusicService(
     override val NOME_STREAMING: String = "Youtube Music",
     private val youtubeClient: YoutubeClient,
     private val objectMapper: ObjectMapper = ObjectMapper(),
-) : CommandStreamingMusic, CommandStreamingPodcast {
+) : CommandStreamingMusic {
 
     override suspend fun buscaPorArtista(requestParams: RequestParams): ItemResponse {
         Logs.info("ENTRY: YoutubeMusicService/buscaPorArtista", requestParams.id)
@@ -38,14 +38,6 @@ class YoutubeMusicService(
                 erro = ex.message,
             )
         }
-    }
-
-    override suspend fun buscaPorPodcast(requestParams: RequestParams): ItemResponse {
-        return ItemResponse(
-            streaming = NOME_STREAMING,
-            consulta = requestParams.busca,
-            erro = "busca por podcast ainda não implementada",
-        )
     }
 
     private suspend fun buscaArtista(requestParams: RequestParams): YoutubeArtistDto {

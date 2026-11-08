@@ -19,6 +19,7 @@ import kotlinx.coroutines.launch
 import org.springframework.scheduling.annotation.Scheduled
 import org.springframework.stereotype.Service
 import java.net.URI
+import kotlin.time.Duration.Companion.milliseconds
 
 private const val DELAY_REQUEST = 300L
 private const val DELAY_RETRY = 1000L
@@ -29,7 +30,7 @@ private const val VALIDADE_TOKEN = 86400 * 1000L
 class TidalService(
     override val NOME_STREAMING: String = "Tidal",
     private val tidalClient: TidalClient,
-) : CommandStreamingMusic, CommandStreamingPodcast {
+) : CommandStreamingMusic {
 
     @Scheduled(fixedRate = VALIDADE_TOKEN)
     fun agendarAtualizacaoToken() {
@@ -56,14 +57,6 @@ class TidalService(
                 erro = ex.message
             )
         }
-    }
-
-    override suspend fun buscaPorPodcast(requestParams: RequestParams): ItemResponse {
-        return ItemResponse(
-            streaming = NOME_STREAMING,
-            consulta = requestParams.busca,
-            erro = "busca por podcast ainda não implementada"
-        )
     }
 
     private suspend fun buscaArtista(requestParams: RequestParams): TidalResult {
@@ -132,7 +125,7 @@ class TidalService(
             resultado.onSuccess { nextUri ->
                 proximaUri = nextUri
                 paginaAtual++
-                delay(DELAY_REQUEST)
+                delay(DELAY_REQUEST.milliseconds)
             }
 
             resultado.onFailure {
@@ -140,7 +133,7 @@ class TidalService(
                 val is429 = it.localizedMessage?.contains("429") == true || it.cause?.localizedMessage?.contains("429") == true
                 if (is429) {
                     errosReq++
-                    delay(DELAY_RETRY)
+                    delay(DELAY_RETRY.milliseconds)
                 } else {
                     throw FalhaAoBuscarAlbunsDoArtista()
                 }

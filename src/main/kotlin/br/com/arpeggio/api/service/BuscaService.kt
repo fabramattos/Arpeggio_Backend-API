@@ -31,8 +31,6 @@ class BuscaService(
     val commandStreamingPodcast: List<CommandStreamingPodcast> = listOf(
         spotifyPodcastService,
         deezerPodcastService,
-        youtubeMusicService,
-        tidalService,
     ),
 ) {
 
