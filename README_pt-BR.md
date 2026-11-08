@@ -12,6 +12,9 @@ No momento, conectamos com:
 
 🚨 **_Este repositório é relativo ao Backend utilizado pelas versões web e android_** 🚨
 
+🌐 **Aplicação Frontend em Produção:** [**https://consulta-arpeggio.vercel.app/**](https://consulta-arpeggio.vercel.app/)  
+📦 **Repositório do Frontend:** [**https://github.com/fabramattos/Arpeggio_Frontend**](https://github.com/fabramattos/Arpeggio_Frontend)
+
 ## 🚧 Status do projeto 🚧
 ![Badge em Desenvolvimento](http://img.shields.io/static/v1?label=STATUS&message=EM%20DESENVOLVIMENTO&color=GREEN&style=for-the-badge)
 
@@ -26,7 +29,7 @@ No momento, conectamos com:
 ## 📖 Como utilizar (API isolada sem frontend)
 É possível utilizar e testar as funcionalidades da API diretamente via requisições HTTP ou pela documentação interativa do Swagger UI:
 
-- **Host (Railway):** `https://arpeggio.up.railway.app`
+- **App Web (Produção):** [**https://consulta-arpeggio.vercel.app/**](https://consulta-arpeggio.vercel.app/)
 - **Swagger-UI Interativo:** [**https://arpeggio.up.railway.app/swagger-ui/index.html**](https://arpeggio.up.railway.app/swagger-ui/index.html)
 - **Contrato OpenAPI 3.0 (JSON para Frontends / Agentes de IA):** [**https://arpeggio.up.railway.app/swagger.json**](https://arpeggio.up.railway.app/swagger.json)
 - **Status da API (Healthcheck):** `https://arpeggio.up.railway.app/health`
