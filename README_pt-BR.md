@@ -24,9 +24,12 @@ No momento, conectamos com:
  - OpenAPI / Swagger (SpringDoc 2.6)
 
 ## 📖 Como utilizar (API isolada sem frontend)
-É possível utilizar e testar as funcionalidades da API diretamente via documentação interativa do Swagger UI:
+É possível utilizar e testar as funcionalidades da API diretamente via requisições HTTP ou pela documentação interativa do Swagger UI:
 
-- **Swagger-UI Interativo:** [**https://arpeggio.up.railway.app/doc/swagger-ui/index.html**](https://arpeggio.up.railway.app/doc/swagger-ui/index.html)
+- **Host (Railway):** `https://arpeggio.up.railway.app`
+- **Swagger-UI Interativo:** [**https://arpeggio.up.railway.app/swagger-ui/index.html**](https://arpeggio.up.railway.app/swagger-ui/index.html)
+- **Contrato OpenAPI 3.0 (JSON para Frontends / Agentes de IA):** [**https://arpeggio.up.railway.app/swagger.json**](https://arpeggio.up.railway.app/swagger.json)
+- **Status da API (Healthcheck):** `https://arpeggio.up.railway.app/health`
 
 ## 💡 Futuras implementações 💡
 ### Novos Streamings:

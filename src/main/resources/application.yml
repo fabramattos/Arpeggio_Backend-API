@@ -6,8 +6,10 @@ server:
   forward-headers-strategy: native
 
 springdoc:
+  api-docs:
+    path: /swagger.json
   swagger-ui:
-    path: /doc/swagger-ui
+    path: /swagger-ui
     defaultModelsExpandDepth: -1
 
 secrets:
