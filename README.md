@@ -3,11 +3,14 @@
 **Arpeggio** is an audio streaming comparison app.<br>
 With it, users can:<br>
 
-☑️ Check the number of albums available on streaming services by searching for an artist's or band's name<br>
-☑️ check the number of episodes of a podcast available on streaming services.<br>
-❎ finish a game of Uno without arguing with other players.<br>
+☑️ Check the number of releases (Albums, Singles, and EPs) available on streaming services by searching for an artist's or band's name<br>
+☑️ Check the number of podcast episodes available on streaming services.<br>
+❎ Finish a game of Uno without arguing with other players.<br>
 
-Currently, we integrate with: Spotify, Deezer, Tidal, and YouTube Music.<br>
+Currently, we integrate with:
+- **Music:** Spotify, Deezer, Tidal, YouTube Music, and Apple Music.
+- **Podcasts:** Spotify, Deezer, and Apple Podcasts.
+
 🚨 **_This repository is related to the Backend used by the web and android versions_** 🚨
 
 
@@ -18,20 +21,19 @@ Currently, we integrate with: Spotify, Deezer, Tidal, and YouTube Music.<br>
  - Java 21 (LTS)
  - Kotlin 2.1
  - Kotlin Coroutines 1.10
- - Spring Boot 3.3 (Web, WebFlux)
+ - Spring Boot 3.3 (Web, WebFlux / WebClient)
  - Docker & Docker Compose
- - Selenium Web Driver
  - OpenAPI / Swagger (SpringDoc 2.6)
 
-## How to Use
-Currently, you can test the functionalities through the interactive Swagger-UI documentation [**at this link**](https://arpeggio-api-374326808505.southamerica-east1.run.app/doc/swagger-ui/index.html)
+## 📖 How to Use (Standalone API without frontend)
+The API can be used directly without a frontend by sending HTTP requests testing via the interactive Swagger UI:
+
+- **Interactive Swagger-UI:** [**https://arpeggio.up.railway.app/doc/swagger-ui/index.html**](https://arpeggio.up.railway.app/doc/swagger-ui/index.html)
 
 ## 💡 Future Integrations 💡
 ### New Streaming Services:
 - Amazon Music:
-  - API only for Amazon partner developers at the moment.
-- Apple Music:
-  - Apple being Apple. Subscription required to access their API. Not feasible at the moment 💸
+  - Exploring direct REST/JSON endpoints without requiring browser automation.
 
 ### New Features
 - [ ] user registration
